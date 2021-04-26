@@ -22,23 +22,46 @@ const MouseOverPopover = () => {
    const [pickFromCurrent, setPickFromCurrent] = useState('contents')
    const [mine, setMine] = useState('none')
    const [tData, setTdata] = useState([])
+   const [newSet, setNewSet] = useState([])
+   const [saveDataMn, setSaveDataMn] = useState([])
+
 
    const suggestionCapture = []
 
    const tester = testData;
 
 
-   let saveDataM = []
-   let saveDataMn = []
-
-   const filterer = async (dataSet) => {
-      dataSet = [...new Set(dataSet)];
+   const datafeed = async () => {
+      const newSetz = await axios.get('http://localhost/gokadaApi/api/suggestions')
+      return newSetz.data
    }
 
-   const uniqueSuggestion = async () => {
 
-      let uniqueSugggestionsData = [...new Set(suggestionCapture)];
 
+
+
+
+
+   useEffect(async () => {
+      const newSetz = await axios.get('http://localhost/gokadaApi/api/suggestions')
+      setNewSet(newSetz.data)
+
+      /* context = canvas.current.getContext("2d");
+      drawCircle(context, coordinateX, coordinateY);
+      return context;
+       */
+   }, []);
+
+   console.log(newSet);
+
+
+
+   let saveDataM = []
+
+
+   const uniqueSuggestion = () => {
+
+      let uniqueSugggestionsData = Array.from(new Set(suggestionCapture.map(JSON.stringify))).map(JSON.parse)
       console.log(uniqueSugggestionsData)
 
       const saveData = uniqueSugggestionsData.map(sugData => {
@@ -48,27 +71,83 @@ const MouseOverPopover = () => {
          geocodeByAddress(sugData.desc)
             .then(results => getLatLng(results[0]))
             .then(latLng => {
-               saveDataM.push({ address: sugData.desc.toLowerCase(), main: sugData.main, sec: sugData.sec, lat: latLng.lat, lng: latLng.lng })
+               saveDataM.unshift({ "Address": sugData.desc.toLowerCase(), "Main": sugData.main, "Sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
+               dataCoord = { lat: latLng.lat, lng: latLng.lng }
+               return saveDataM;
             })
-            .then(console.log(saveDataM))
+            /* .then( result => result[-1]) */
+            .then(result => result[0])
+            .then(result => fetch('http://localhost/gokadaApi/api/suggestions', {
+               method: "POST",
+               headers: {
+                  "Accept": "application/json",
+                  "Content-Type": "application/json"
+               },
+               body: JSON.stringify(result)
+            }))
+            .then(response => console.log(response))
             .catch(error => console.error('Error', error));
 
          /* console.log(dataCoord) */
 
-         return { address: sugData, coords: dataCoord }
+         return saveDataM
       })
 
-      console.log(saveData)
-      /* console.log(saveDataM) */
+      return saveDataM
+   }
+   /*
+   fetch("https://bamziapi.ivyarc.com/api/productCart", {
+         /* fetch("http://localhost/bamzi/api/productCart", { 
+         method: "POST",
+         headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+         },
+         body: JSON.stringify({
+            id: cartItem.id,
+            productName: cartItem.productName,
+            productPrice: cartItem.productPrice,
+            active: cartItem.active,
+            productQuantity: cartItem.productQuantity,
+            productSize: cartItem.productSize,
+            productColor: cartItem.productColor,
+            productOwner: cartItem.productOwner,
+            userId: window.localStorage.getItem("userEmail"),
+            productImage1: cartItem.productImage1,
+            productImage2: cartItem.productImage2,
+            productImage3: cartItem.productImage3
+         })
+      }) 
 
+   let operations;
+
+   useEffect(() => {
+      operations = saveDataMn.map( record => axios.post('http://localhost/gokadaApi/api/suggestions', record))
+
+      console.log(operations)
+
+   }, [saveDataMn]) */
+
+   const letsSee = async () => {
+
+      const wait = uniqueSuggestion()
+
+      /* .then(response => {
+         const ops = response.map( record => axios.post('http://localhost/gokadaApi/api/suggestions', record)) 
+         return console.log(ops)
+      })
+       */
 
    }
 
-   const letsSee = () => {
-      console.log([...new Set(suggestionCapture)])
+   const work = (saveDataM) => axios.post('http://localhost/gokadaApi/api/suggestions', saveDataM[0])
 
-
-   }
+   /* 
+   forEach(record => {
+   axios.post('http://localhost/gokadaApi/api/suggestions', record)
+   console.log('work is working')
+   console.log(saveDataM) 
+})*/
 
 
    const showFirst = () => {
@@ -114,7 +193,9 @@ const MouseOverPopover = () => {
             console.log('Success', dropOffAddress)
             showFirst()
          })
-         .catch(error => console.error('Error', error));
+         .catch(error => console.error('Error', error))
+
+
    };
 
    const selectFromCurrent = () => {
@@ -138,13 +219,9 @@ const MouseOverPopover = () => {
 
       checker()
       const laddress = address.toLowerCase();
-      console.log(laddress)
 
-      console.log(testData.length)
-      const ours = testData.filter(test => test.address.includes(laddress)
-      )
+      const ours = newSet.filter(test => test.Address.includes(laddress))
 
-      console.log((ours.length))
 
       if (ours.length == 0) {
          setPickUpAdd(address);
@@ -154,9 +231,6 @@ const MouseOverPopover = () => {
          setPickUpAdd(address);
          setTdata(ours)
       }
-
-      /* setPickUpAdd(address); */
-
 
    };
 
@@ -181,7 +255,8 @@ const MouseOverPopover = () => {
          </AppBar>
 
 
-         <Button onClick={uniqueSuggestion}>Run Functions</Button>
+         <Button onClick={letsSee}>Run Functions</Button>
+         <Button onClick={() => work(saveDataM)}>Run Functions</Button>
 
 
          {  mine == 'contents'
@@ -200,16 +275,16 @@ const MouseOverPopover = () => {
                   onChange={e => handleChangePick(e.target.value)}
                />
                {tData.map(loc =>
-               <Box my={2}>
-                  <ListItem style={{ borderBottom: '1px solid #f1f1f1' }}>
-                     <ListItemAvatar>
-                        <Avatar>
-                           <LocationOn />
-                        </Avatar>
-                     </ListItemAvatar>
-                     <ListItemText primary={loc.main} secondary={loc.sec} />
-                  </ListItem>
-               </Box>
+                  <Box my={2}>
+                     <ListItem style={{ borderBottom: '1px solid #f1f1f1' }}>
+                        <ListItemAvatar>
+                           <Avatar>
+                              <LocationOn />
+                           </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText primary={loc.Main} secondary={loc.Sec} />
+                     </ListItem>
+                  </Box>
                )
                }
             </Box>
@@ -231,11 +306,11 @@ const MouseOverPopover = () => {
                            placeholder: 'Pickup address',
                            className: 'location-search-input',
                         })}
-                        
+
 
                      />
                      <div style={{ display: pickFromCurrent }} onClick={selectFromCurrent}>
-                     <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
+                        <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
                            <ListItemAvatar>
                               <Avatar>
                                  <LocationOn />
