@@ -71,7 +71,7 @@ const MouseOverPopover = () => {
          geocodeByAddress(sugData.desc)
             .then(results => getLatLng(results[0]))
             .then(latLng => {
-               saveDataM.unshift({ "Address": sugData.desc.toLowerCase(), "Main": sugData.main, "Sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
+               saveDataM.unshift({ "address": sugData.desc.toLowerCase(), "main": sugData.main, "sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
                dataCoord = { lat: latLng.lat, lng: latLng.lng }
                return saveDataM;
             })
@@ -213,7 +213,7 @@ const MouseOverPopover = () => {
       checker()
       const laddress = address.toLowerCase();
 
-      const ours = newSet.filter(test => test.Address.includes(laddress))
+      const ours = newSet.filter(test => test.address.includes(laddress))
 
 
       if (ours.length == 0) {
@@ -290,7 +290,7 @@ const MouseOverPopover = () => {
             >
                {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
                   <Box mx={2}>
-                     <Input
+                     <TextField
                         variant='filled'
                         autoFocus
                         defaultValue={pickUpAdd}

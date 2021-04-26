@@ -34,7 +34,7 @@ const MapContainer = props => {
 
       <Map
          google={props.google}
-         zoom={11.5}
+         zoom={11}
          initialCenter={centered}
          center={
             centered
@@ -53,7 +53,7 @@ const MapContainer = props => {
             name={'Current location'}
             position={props.coord1}
             id={1}
-            onClick={console.log('clickabe')}
+
          />
          
          <Marker

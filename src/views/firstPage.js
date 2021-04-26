@@ -2,7 +2,7 @@
 import React, { Component, useState, useEffect } from 'react';
 import { AppBar, Toolbar, Typography, IconButton, Box, TextField, ListItem, ListItemAvatar, ListItemText, Avatar, List, Input, Button, Card } from '@material-ui/core';
 import classes from './firstPage.module.css'
-import { ArrowBackIos, Image, Work, BeachAccess, LocationOn, CheckCircleRounded } from '@material-ui/icons';
+import { ArrowBackIos, Image, Work, BeachAccess, LocationOn, CheckCircleRounded, CollectionsOutlined } from '@material-ui/icons';
 import PlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-places-autocomplete';
 import { Link } from 'react-router-dom'
 import Success from '../assets/success.jpg'
@@ -25,11 +25,16 @@ const MainPage = props => {
    const [pickUpCoord, setPickUpCoord] = useState('')
    const [dropOffCoord, setDropOffCoord] = useState('')
    const [pickFromCurrent, setPickFromCurrent] = useState('contents')
+   const [mine, setMine] = useState('none')
+   const [tData, setTdata] = useState([])
+   const [newSet, setNewSet] = useState([])
+
 
 
    const showFirst = () => {
       setScreen('first')
       setPickFromCurrent('contents')
+      uniqueSuggestion();
    }
 
    const showPickup = () => {
@@ -43,15 +48,61 @@ const MainPage = props => {
    const successfulLookup = position => {
       const { latitude, longitude } = position.coords;
 
-      console.log({ lat: latitude, lng: longitude }); 
+      console.log({ lat: latitude, lng: longitude });
       setPickUpCoord({ lat: latitude, lng: longitude })
-         
+
    }
 
    useEffect(() => {
       window.navigator.geolocation.getCurrentPosition(successfulLookup);
-   },[])
-   
+   }, [])
+
+
+
+   const suggestionCapture = []
+
+
+
+   useEffect(async () => {
+      const newSetz = await axios.get('http://localhost/gokadaApi/api/suggestions')
+      setNewSet(newSetz.data)
+
+   }, []);
+
+   console.log(newSet);
+
+   let saveDataM = []
+
+   const uniqueSuggestion = () => {
+
+      let uniqueSugggestionsData = Array.from(new Set(suggestionCapture.map(JSON.stringify))).map(JSON.parse)
+      console.log(uniqueSugggestionsData)
+
+      const saveData = uniqueSugggestionsData.map(sugData => {
+
+         let dataCoord;
+
+         geocodeByAddress(sugData.desc)
+            .then(results => getLatLng(results[0]))
+            .then(latLng => {
+               saveDataM.unshift({ "address": sugData.desc.toLowerCase(), "main": sugData.main, "sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
+               dataCoord = { lat: latLng.lat, lng: latLng.lng }
+               return saveDataM;
+            })
+            /* .then( result => result[-1]) */
+            .then(result => result[0])
+            .then(result => axios.post('http://localhost/gokadaApi/api/suggestions', result))
+            .then(result => console.log(result))
+            .catch(error => console.error('Error', error));
+
+         /* console.log(dataCoord) */
+
+         return saveDataM
+      })
+
+      return saveDataM
+   }
+
 
    const firstPage = (props) => {
 
@@ -77,7 +128,7 @@ const MainPage = props => {
             <Box style={{ height: '100%', backgroundColor: 'blue' }}>
                <Map coord1={pickUpCoord} coord2={dropOffCoord} />
 
-            </Box>   
+            </Box>
 
             { pickUpAddress && dropOffAddress ?
                <Card style={{ width: '100%' }}>
@@ -102,9 +153,22 @@ const MainPage = props => {
 
    const dropOff = props => {
 
-
       const handleChangeDrop = address => {
-         setDropOffAdd(address);
+         const laddress = address.toLowerCase();
+
+         const ours = newSet.filter(test => test.address.includes(laddress))
+
+         console.log(ours)
+
+         if (ours.length == 0) {
+            setDropOffAdd(address);
+            setMine('none')
+         } else {
+            setMine('contents')
+            setDropOffAdd(address);
+            setTdata(ours)
+            setDropOffAdd(address);
+         }
       };
 
       const handleSelectDrop = address => {
@@ -123,94 +187,175 @@ const MainPage = props => {
 
       };
 
-      const searchOptions = {
-         location: new google.maps.LatLng(6.59912, 3.24664),
-         radius: 50000,
-         types: ['address'],
-         strictBounds: true
+      const handleDropFromOurs = (loc) => {
+
+         setDropOffCoord({ lat: loc.lat, lng: loc.lng })
+
+         const addressBack = loc.address.replace(/(^\w{1})|(\s{1}\w{1})/g, match => match.toUpperCase());
+
+         setDropOffAddress(addressBack)
+
+         showFirst()
+
+         console.log('its me')
       }
 
 
-      return (<Box>
-         <AppBar position="static" style={{ backgroundColor: 'white', color: 'black', fontWeight: 'bolder', boxShadow: '0px 0px 0px 0px' }}>
-            <Toolbar >
-               <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu" onClick={showFirst}>
-                  <ArrowBackIos />
-                  <Typography variant="subtitle1" >
-                     Back
-                  </Typography>
-               </IconButton>
+      const searchOptions = {
+         location: new google.maps.LatLng(pickUpCoord.lat, pickUpCoord.lng),
+         radius: 50000,
+         types: ['address'],
+         componentRestrictions: { country: "ng" },
+         strictBounds: true
 
-               <Typography variant="h5" className={classes.typographydp}>
-                  Dropoff &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-               </Typography>
+      }
 
-            </Toolbar>
-         </AppBar>
-         <PlacesAutocomplete
-            value={dropOffAdd}
-            onChange={handleChangeDrop}
-            onSelect={handleSelectDrop}
-            searchOptions={searchOptions}
-            strict
-         >
-            {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
-               <div>
+
+      return (
+         <Box style={{ height: '100vh' }}>
+            <AppBar position="static" style={{ backgroundColor: 'white', color: 'black', fontWeight: 'bolder', boxShadow: '0px 0px 0px 0px' }}>
+               <Toolbar >
+                  <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu" onClick={showFirst}>
+                     <ArrowBackIos />
+                     <Typography variant="subtitle1" >
+                        Back
+            </Typography>
+                  </IconButton>
+
+                  <Typography variant="h5" className={classes.typographydp}>
+                     Dropoff &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+         </Typography>
+
+               </Toolbar>
+            </AppBar>
+
+
+            {mine == 'contents'
+               ?
+               <Box mx={2}>
                   <TextField
                      variant='filled'
                      defaultValue={dropOffAdd}
                      fullWidth
-                     {...getInputProps({
-                        placeholder: 'Dropoff address',
+                     autoFocus
+                     {...{
+                        placeholder: 'Pickup address',
                         className: 'location-search-input',
-                     })}
+                     }}
+                     onChange={e => handleChangeDrop(e.target.value)}
                   />
-                  <div className="autocomplete-dropdown-container">
-                     {loading && <div>Loading...</div>}
-                     {<List >
-                        {suggestions.map(suggestion => {
-                           const className = suggestion.active
-                              ? 'suggestion-item--active'
-                              : 'suggestion-item';
-                           // inline style for demonstration purpose
-                           const style = suggestion.active
-                              ? { backgroundColor: '#fafafa', cursor: 'pointer' }
-                              : { backgroundColor: '#ffffff', cursor: 'pointer' };
-                           return (
-                              <div
-                                 {...getSuggestionItemProps(suggestion, {
-                                    className,
-                                    style,
-                                 })}
-                              >
-                                 <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
-                                    <ListItemAvatar>
-                                       <Avatar>
-                                          <LocationOn />
-                                       </Avatar>
-                                    </ListItemAvatar>
-                                    <ListItemText primary={suggestion.formattedSuggestion.mainText} secondary={suggestion.formattedSuggestion.secondaryText} />
-                                 </ListItem>
-                              </div>
-                           );
-                        })}
+                  {tData.map(loc => {
+                     const ourCoord = { lat: loc.lat, lng: loc.lng }
+                     return (<Box my={2}  >
+                        <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handleDropFromOurs(loc)} >
+                           <ListItemAvatar>
+                              <Avatar>
+                                 <LocationOn />
+                              </Avatar>
+                           </ListItemAvatar>
+                           <ListItemText primary={loc.main} secondary={loc.sec} />
+                        </ListItem>
+                     </Box>)
+                  }
+                  )
+                  }
+               </Box>
+               :
+               <PlacesAutocomplete
+                  value={dropOffAdd}
+                  onChange={handleChangeDrop}
+                  onSelect={handleSelectDrop}
+                  searchOptions={searchOptions}
+               >
+                  {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
+                     <Box mx={2}>
+                        <TextField
+                           variant='filled'
+                           autoFocus
+                           defaultValue={dropOffAdd}
+                           fullWidth
+                           {...getInputProps({
+                              placeholder: 'Pickup address',
+                              className: 'location-search-input',
+                           })}
 
 
-                     </List>}
+                        />
 
-                  </div>
-               </div>
-            )}
-         </PlacesAutocomplete>
-      </Box>
-      );
+                        <div className="autocomplete-dropdown-container">
+                           {loading && <div>Loading...</div>}
+                           {<List>
+                              {suggestions.map(suggestion => {
+                                 console.log(suggestion.description)
+                                 suggestionCapture.push({
+                                    desc: suggestion.description,
+                                    main: suggestion.formattedSuggestion.mainText,
+                                    sec: suggestion.formattedSuggestion.secondaryText
+                                 })
+
+                                 console.log(suggestionCapture)
+                                 const className = suggestion.active
+                                    ? 'suggestion-item--active'
+                                    : 'suggestion-item';
+                                 // inline style for demonstration purpose
+                                 const style = suggestion.active
+                                    ? { backgroundColor: '#fafafa', cursor: 'pointer' }
+                                    : { backgroundColor: '#ffffff', cursor: 'pointer' };
+
+
+
+                                 return (
+                                    <div
+                                       {...getSuggestionItemProps(suggestion, {
+                                          className,
+                                          style,
+                                       })}
+                                    >
+                                       <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
+                                          <ListItemAvatar>
+                                             <Avatar>
+                                                <LocationOn />
+                                             </Avatar>
+                                          </ListItemAvatar>
+                                          <ListItemText primary={suggestion.formattedSuggestion.mainText} secondary={suggestion.formattedSuggestion.secondaryText} />
+                                       </ListItem>
+                                    </div>
+                                 );
+                              })}
+
+
+                           </List>}
+
+                        </div>
+                     </Box>
+                  )}
+               </PlacesAutocomplete>}
+         </Box>
+      )
    }
 
    const pickUp = props => {
 
       const handleChangePick = address => {
-         setPickUpAdd(address);
+
+         checker()
+         const laddress = address.toLowerCase();
+
+         const ours = newSet.filter(test => test.address.includes(laddress))
+
+         console.log(ours)
+
+         if (ours.length == 0) {
+            setPickUpAdd(address);
+            setMine('none')
+         } else {
+            setMine('contents')
+            setPickUpAdd(address);
+            setTdata(ours)
+         }
+
       };
+
 
       const checker = (e) => {
          setPickFromCurrent('none')
@@ -231,21 +376,37 @@ const MainPage = props => {
             .catch(error => console.error('Error', error));
       };
 
+      const handlePickFromOurs = (loc) => {
+
+         setPickUpCoord({ lat: loc.lat, lng: loc.lng })
+
+         const addressBack = loc.address.replace(/(^\w{1})|(\s{1}\w{1})/g, match => match.toUpperCase());
+
+         setPickUpAddress(addressBack)
+
+         showFirst()
+
+         console.log('its me')
+      }
+
       const selectFromCurrent = () => {
-         
+
          axios(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${pickUpCoord.lat},${pickUpCoord.lng}&key=AIzaSyAVwufhSaNsbADF3iEEzWtFfQsNsAxgyTU`)
-               .then(response => response.data.results)
-               .then( result => setPickUpAddress( result[0].formatted_address))
-               .then( showFirst() ) 
-         
-         setPickUpCoord({lat:pickUpCoord.lat,lng: pickUpCoord.lng})
+            .then(response => response.data.results)
+            .then(result => setPickUpAddress(result[0].formatted_address))
+            .then(showFirst())
+
+         setPickUpCoord({ lat: pickUpCoord.lat, lng: pickUpCoord.lng })
 
       }
 
       const searchOptions = {
-         location: new google.maps.LatLng(6.59912, 3.24664),
+         location: new google.maps.LatLng(pickUpCoord.lat, pickUpCoord.lng),
          radius: 50000,
          types: ['address'],
+         componentRestrictions: { country: "ng" },
+         strictBounds: true
+
       }
 
 
@@ -269,73 +430,117 @@ const MainPage = props => {
             </AppBar>
 
 
-            <PlacesAutocomplete
-               value={pickUpAdd}
-               onChange={handleChangePick}
-               onSelect={handleSelectPick}
-               searchOptions={searchOptions}
-            >
-               {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
-                  <Box mx={2}>
-                     <Input
-                        variant='filled'
-                        defaultValue={pickUpAdd}
-                        fullWidth
-                        {...getInputProps({
-                           placeholder: 'Pickup address',
-                           className: 'location-search-input',
-                        })}
-                        onFocus={e => checker(e)}
-                     />
-                     <div style={{ display: pickFromCurrent }} onClick={selectFromCurrent}>
-                        <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
+            {  mine == 'contents'
+               ?
+               <Box mx={2}>
+                  <TextField
+                     variant='filled'
+                     defaultValue={pickUpAdd}
+                     fullWidth
+                     autoFocus
+                     {...{
+                        placeholder: 'Pickup address',
+                        className: 'location-search-input',
+                     }}
+                     onFocus={e => checker(e)}
+                     onChange={e => handleChangePick(e.target.value)}
+                  />
+                  {tData.map(loc => {
+                     const ourCoord = { lat: loc.lat, lng: loc.lng }
+                     return (<Box my={2}  >
+                        <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handlePickFromOurs(loc)} >
                            <ListItemAvatar>
                               <Avatar>
                                  <LocationOn />
                               </Avatar>
                            </ListItemAvatar>
-                           <ListItemText primary="Current Location" secondary="Pick up from current location" />
+                           <ListItemText primary={loc.main} secondary={loc.sec} />
                         </ListItem>
-                     </div>
-
-                     <div className="autocomplete-dropdown-container">
-                        {loading && <div>Loading...</div>}
-                        {<List>
-                           {suggestions.map(suggestion => {
-                              console.log(suggestion.description)
-                              const className = suggestion.active
-                                 ? 'suggestion-item--active'
-                                 : 'suggestion-item';
-                              // inline style for demonstration purpose
-                              const style = suggestion.active
-                                 ? { backgroundColor: '#fafafa', cursor: 'pointer' }
-                                 : { backgroundColor: '#ffffff', cursor: 'pointer' };
-                              return (
-                                 <div
-                                    {...getSuggestionItemProps(suggestion, {
-                                       className,
-                                       style,
-                                    })}
-                                 >
-                                    <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
-                                       <ListItemAvatar>
-                                          <Avatar>
-                                             <LocationOn />
-                                          </Avatar>
-                                       </ListItemAvatar>
-                                       <ListItemText primary={suggestion.formattedSuggestion.mainText} secondary={suggestion.formattedSuggestion.secondaryText} />
-                                    </ListItem>
-                                 </div>
-                              );
+                     </Box>)
+                  }
+                  )
+                  }
+               </Box>
+               :
+               <PlacesAutocomplete
+                  value={pickUpAdd}
+                  onChange={handleChangePick}
+                  onSelect={handleSelectPick}
+                  searchOptions={searchOptions}
+               >
+                  {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
+                     <Box mx={2}>
+                        <TextField
+                           variant='filled'
+                           autoFocus
+                           defaultValue={pickUpAdd}
+                           fullWidth
+                           {...getInputProps({
+                              placeholder: 'Pickup address',
+                              className: 'location-search-input',
                            })}
 
 
-                        </List>}
+                        />
+                        <div style={{ display: pickFromCurrent }} onClick={selectFromCurrent}>
+                           <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
+                              <ListItemAvatar>
+                                 <Avatar>
+                                    <LocationOn />
+                                 </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText primary="Current Location" secondary="Pick up from current location" />
+                           </ListItem>
+                        </div>
 
-                     </div>
-                  </Box>
-               )}
-            </PlacesAutocomplete>
+                        <div className="autocomplete-dropdown-container">
+                           {loading && <div>Loading...</div>}
+                           {<List>
+                              {suggestions.map(suggestion => {
+                                 console.log(suggestion.description)
+                                 suggestionCapture.push({
+                                    desc: suggestion.description,
+                                    main: suggestion.formattedSuggestion.mainText,
+                                    sec: suggestion.formattedSuggestion.secondaryText
+                                 })
+
+                                 console.log(suggestionCapture)
+                                 const className = suggestion.active
+                                    ? 'suggestion-item--active'
+                                    : 'suggestion-item';
+                                 // inline style for demonstration purpose
+                                 const style = suggestion.active
+                                    ? { backgroundColor: '#fafafa', cursor: 'pointer' }
+                                    : { backgroundColor: '#ffffff', cursor: 'pointer' };
+
+
+
+                                 return (
+                                    <div
+                                       {...getSuggestionItemProps(suggestion, {
+                                          className,
+                                          style,
+                                       })}
+                                    >
+                                       <ListItem style={{ borderBottom: '1px solid #f5f5f9' }}>
+                                          <ListItemAvatar>
+                                             <Avatar>
+                                                <LocationOn />
+                                             </Avatar>
+                                          </ListItemAvatar>
+                                          <ListItemText primary={suggestion.formattedSuggestion.mainText} secondary={suggestion.formattedSuggestion.secondaryText} />
+                                       </ListItem>
+                                    </div>
+                                 );
+                              })}
+
+
+                           </List>}
+
+                        </div>
+                     </Box>
+                  )}
+               </PlacesAutocomplete>}
          </Box>
       )
    }
