@@ -1,7 +1,4 @@
-import logo from './logo.svg';
-/* import './App.css'; */
 import mainPage from './views/mainPage'
-
 import { Route, Switch } from 'react-router-dom/';
 
 function App() {

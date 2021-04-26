@@ -1,7 +1,8 @@
 /*global google*/
-import React, { Component, useState, useEffect } from 'react';
-import { Map, InfoWindow, Marker, GoogleApiWrapper, Polyline } from 'google-maps-react';
-import { NavigateNext } from '@material-ui/icons';
+import React from 'react';
+import { Map, Marker, GoogleApiWrapper, Polyline } from 'google-maps-react';
+/* import {  InfoWindow } from 'google-maps-react';
+import { NavigateNext } from '@material-ui/icons'; */
 
 
 const MapContainer = props => {

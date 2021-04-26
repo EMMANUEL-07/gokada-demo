@@ -1,5 +1,5 @@
 /*global google*/
-import React, { Component, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppBar, Toolbar, Typography, IconButton, Box, TextField, ListItem, ListItemAvatar, ListItemText, Avatar, List, Button, Card } from '@material-ui/core';
 import { ArrowBackIos, LocationOn } from '@material-ui/icons';
 import PlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-places-autocomplete';
@@ -75,13 +75,12 @@ const MainPage = props => {
 
       const saveData = uniqueSugggestionsData.map(sugData => {
 
-         let dataCoord;
+         
 
          geocodeByAddress(sugData.desc)
          .then(results => getLatLng(results[0]))
          .then(latLng => {
             saveDataM.unshift({ "address": sugData.desc.toLowerCase(), "main": sugData.main, "sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
-            dataCoord = { lat: latLng.lat, lng: latLng.lng }
             return saveDataM;
          })
          .then(result => result[0])
@@ -159,7 +158,7 @@ const MainPage = props => {
          const ours = newSet.filter(test => test.address.includes(laddress))
 
 
-         if (ours.length == 0) {
+         if (ours.length === 0) {
             setDropOffAdd(address);
             setMine('none')
          } else {
@@ -226,7 +225,7 @@ const MainPage = props => {
             </AppBar>
 
             {/* Dynamic content to display input for either data from the autocomplete function or from the database */}
-            {mine == 'contents'
+            {mine === 'contents'
                ?
                <Box mx={2}>
                   <TextField
@@ -241,7 +240,6 @@ const MainPage = props => {
                      onChange={e => handleChangeDrop(e.target.value)}
                   />
                   {tData.map(loc => {
-                     const ourCoord = { lat: loc.lat, lng: loc.lng }
                      return (<Box my={2}  >
                         <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handleDropFromDB(loc)} >
                            <ListItemAvatar>
@@ -340,7 +338,7 @@ const MainPage = props => {
          const ours = newSet.filter(test => test.address.includes(laddress))
 
 
-         if (ours.length == 0) {
+         if (ours.length === 0) {
             setPickUpAdd(address);
             setMine('none')
          } else {
@@ -424,7 +422,7 @@ const MainPage = props => {
             </AppBar>
 
             {/* Dynamic content to display input for either data from the autocomplete function or from the database */}
-            {  mine == 'contents'
+            {  mine === 'contents'
                ?
                <Box mx={2}>
                   <TextField
@@ -440,7 +438,6 @@ const MainPage = props => {
                      onChange={e => handleChangePick(e.target.value)}
                   />
                   {tData.map(loc => {
-                     const ourCoord = { lat: loc.lat, lng: loc.lng }
                      return (<Box my={2}  >
                         <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handlePickFromDB(loc)} >
                            <ListItemAvatar>
@@ -542,11 +539,11 @@ const MainPage = props => {
 
    let screenShown;
 
-   if (screen == 'first') {
+   if (screen === 'first') {
       screenShown = firstPage()
-   } else if (screen == 'pickUp') {
+   } else if (screen === 'pickUp') {
       screenShown = pickUp()
-   } else if (screen == 'dropOff') {
+   } else if (screen === 'dropOff') {
       screenShown = dropOff()
    } else {
       screenShown = firstPage()
