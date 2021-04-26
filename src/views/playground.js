@@ -77,15 +77,8 @@ const MouseOverPopover = () => {
             })
             /* .then( result => result[-1]) */
             .then(result => result[0])
-            .then(result => fetch('http://localhost/gokadaApi/api/suggestions', {
-               method: "POST",
-               headers: {
-                  "Accept": "application/json",
-                  "Content-Type": "application/json"
-               },
-               body: JSON.stringify(result)
-            }))
-            .then(response => console.log(response))
+            .then(result => axios.post('http://localhost/gokadaApi/api/suggestions', result))
+            .then(result => console.log(result))
             .catch(error => console.error('Error', error));
 
          /* console.log(dataCoord) */
