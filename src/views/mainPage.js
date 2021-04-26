@@ -1,12 +1,8 @@
 /*global google*/
 import React, { Component, useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, IconButton, Box, TextField, ListItem, ListItemAvatar, ListItemText, Avatar, List, Input, Button, Card } from '@material-ui/core';
-import classes from './firstPage.module.css'
-import { ArrowBackIos, Image, Work, BeachAccess, LocationOn, CheckCircleRounded, CollectionsOutlined } from '@material-ui/icons';
+import { AppBar, Toolbar, Typography, IconButton, Box, TextField, ListItem, ListItemAvatar, ListItemText, Avatar, List, Button, Card } from '@material-ui/core';
+import { ArrowBackIos, LocationOn } from '@material-ui/icons';
 import PlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-places-autocomplete';
-import { Link } from 'react-router-dom'
-import Success from '../assets/success.jpg'
-/* import {Map, InfoWindow, Marker, GoogleApiWrapper} from 'google-maps-react'; */
 import Map from './map'
 import axios from 'axios'
 
@@ -15,7 +11,7 @@ import axios from 'axios'
 
 const MainPage = props => {
 
-
+   /* Simple state management used across all components and functions */
 
    const [screen, setScreen] = useState('first')
    const [pickUpAdd, setPickUpAdd] = useState('')
@@ -30,6 +26,7 @@ const MainPage = props => {
    const [newSet, setNewSet] = useState([])
 
 
+   //Functionality to navigate between screens and also handle some other functions
 
    const showFirst = () => {
       setScreen('first')
@@ -45,10 +42,9 @@ const MainPage = props => {
       setScreen('dropOff')
    }
 
+   //Functionality to get user's current location, on page initial mount
    const successfulLookup = position => {
       const { latitude, longitude } = position.coords;
-
-      console.log({ lat: latitude, lng: longitude });
       setPickUpCoord({ lat: latitude, lng: longitude })
 
    }
@@ -58,44 +54,39 @@ const MainPage = props => {
    }, [])
 
 
-
-   const suggestionCapture = []
-
-
-
+   //Functionality to get stored suggestions from database, on page initial mount
    useEffect(async () => {
       const newSetz = await axios.get('http://localhost/gokadaApi/api/suggestions')
       setNewSet(newSetz.data)
 
    }, []);
 
-   console.log(newSet);
 
+   //Array const where all suugestions are stored from the autoplaces complete response
+   const suggestionCapture = []
+
+   //Array const where unique suugestions are stored alog with its coordinates and formatted details
    let saveDataM = []
 
+   //Functionalty to process suggestions, return unique values, process them into desired object format, and store in database
    const uniqueSuggestion = () => {
 
       let uniqueSugggestionsData = Array.from(new Set(suggestionCapture.map(JSON.stringify))).map(JSON.parse)
-      console.log(uniqueSugggestionsData)
 
       const saveData = uniqueSugggestionsData.map(sugData => {
 
          let dataCoord;
 
          geocodeByAddress(sugData.desc)
-            .then(results => getLatLng(results[0]))
-            .then(latLng => {
-               saveDataM.unshift({ "address": sugData.desc.toLowerCase(), "main": sugData.main, "sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
-               dataCoord = { lat: latLng.lat, lng: latLng.lng }
-               return saveDataM;
-            })
-            /* .then( result => result[-1]) */
-            .then(result => result[0])
-            .then(result => axios.post('http://localhost/gokadaApi/api/suggestions', result))
-            .then(result => console.log(result))
-            .catch(error => console.error('Error', error));
-
-         /* console.log(dataCoord) */
+         .then(results => getLatLng(results[0]))
+         .then(latLng => {
+            saveDataM.unshift({ "address": sugData.desc.toLowerCase(), "main": sugData.main, "sec": sugData.sec, "lat": latLng.lat, "lng": latLng.lng })
+            dataCoord = { lat: latLng.lat, lng: latLng.lng }
+            return saveDataM;
+         })
+         .then(result => result[0])
+         .then(result => axios.post('http://localhost/gokadaApi/api/suggestions', result))
+         .catch(error => console.error('Error', error));
 
          return saveDataM
       })
@@ -104,6 +95,8 @@ const MainPage = props => {
    }
 
 
+   //Functional Component holding content to be displayed on load of application
+
    const firstPage = (props) => {
 
       return (
@@ -111,7 +104,7 @@ const MainPage = props => {
          <Box style={{ height: '100vh' }}>
             <AppBar position="static" style={{ backgroundColor: 'white', color: 'black', fontWeight: 'bolder', boxShadow: '0px 0px 0px 0px' }}>
                <Toolbar align='center'>
-                  <Typography variant="h5" fontWeight="fontWeightBold" className={classes.typographyp}>
+                  <Typography variant="h5" fontWeight="fontWeightBold" style={{ flexGrow: 1, textAlign: "center", fontWeight: "bold"}}>
                      <Box fontWeight="fontWeightBold">
                         Parcel request
                   </Box>
@@ -119,17 +112,20 @@ const MainPage = props => {
                </Toolbar>
             </AppBar>
 
+            {/* Input fields serving as gateway to accept pickup and dropoff details */}
             <Box display="flex" flexDirection="column" mx={2} >
                <div onClick={showPickup}><TextField id="1" label="Pickup address" variant="filled" margin='normal' fullWidth value={pickUpAddress} /></div>
                <div onClick={showDropoff}><TextField id="2" label="Dropoff address" variant="filled" margin='normal' fullWidth value={dropOffAddress} /></div>
 
             </Box>
 
-            <Box style={{ height: '100%', backgroundColor: 'blue' }}>
+            {/* Section displaying rendered map */}
+            <Box style={{ height: '100%'}}>
                <Map coord1={pickUpCoord} coord2={dropOffCoord} />
 
             </Box>
 
+            {/* Section to display order details when ready */}
             { pickUpAddress && dropOffAddress ?
                <Card style={{ width: '100%' }}>
                   <Box display='flex' justifyContent='space-between' p={1} fontWeight="fontWeightBold" fontSize="h5.fontSize">
@@ -151,14 +147,17 @@ const MainPage = props => {
       )
    }
 
+
+   //Functional Component to display interface for dropOff details
    const dropOff = props => {
 
+
+      //Onchange functionality executed as user inputs value
       const handleChangeDrop = address => {
          const laddress = address.toLowerCase();
 
          const ours = newSet.filter(test => test.address.includes(laddress))
 
-         console.log(ours)
 
          if (ours.length == 0) {
             setDropOffAdd(address);
@@ -171,23 +170,21 @@ const MainPage = props => {
          }
       };
 
+      //OnSelect functionality executed when user confirms address, for values coming from autoComplete api
       const handleSelectDrop = address => {
          geocodeByAddress(address)
             .then(results => getLatLng(results[0]))
             .then(latLng => {
                setDropOffCoord(latLng)
                setDropOffAddress(address)
-               console.log('Success', latLng)
-               console.log('Success', address)
-               console.log('Success', dropOffCoord)
-               console.log('Success', dropOffAddress)
                showFirst()
             })
             .catch(error => console.error('Error', error));
 
       };
 
-      const handleDropFromOurs = (loc) => {
+      //OnSelect functionality executed when user confirms address, for values coming from database
+      const handleDropFromDB = (loc) => {
 
          setDropOffCoord({ lat: loc.lat, lng: loc.lng })
 
@@ -197,10 +194,9 @@ const MainPage = props => {
 
          showFirst()
 
-         console.log('its me')
       }
 
-
+      //Config options for autocomplete Api
       const searchOptions = {
          location: new google.maps.LatLng(pickUpCoord.lat, pickUpCoord.lng),
          radius: 50000,
@@ -215,21 +211,21 @@ const MainPage = props => {
          <Box style={{ height: '100vh' }}>
             <AppBar position="static" style={{ backgroundColor: 'white', color: 'black', fontWeight: 'bolder', boxShadow: '0px 0px 0px 0px' }}>
                <Toolbar >
-                  <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu" onClick={showFirst}>
+                  <IconButton edge="start"  color="inherit" aria-label="menu" onClick={showFirst}>
                      <ArrowBackIos />
                      <Typography variant="subtitle1" >
                         Back
             </Typography>
                   </IconButton>
 
-                  <Typography variant="h5" className={classes.typographydp}>
+                  <Typography variant="h5" style={{ flexGrow: 1, textAlign: "center", display: "flex", justifyContent: "center"}}>
                      Dropoff &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
          </Typography>
 
                </Toolbar>
             </AppBar>
 
-
+            {/* Dynamic content to display input for either data from the autocomplete function or from the database */}
             {mine == 'contents'
                ?
                <Box mx={2}>
@@ -247,7 +243,7 @@ const MainPage = props => {
                   {tData.map(loc => {
                      const ourCoord = { lat: loc.lat, lng: loc.lng }
                      return (<Box my={2}  >
-                        <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handleDropFromOurs(loc)} >
+                        <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handleDropFromDB(loc)} >
                            <ListItemAvatar>
                               <Avatar>
                                  <LocationOn />
@@ -286,18 +282,16 @@ const MainPage = props => {
                            {loading && <div>Loading...</div>}
                            {<List>
                               {suggestions.map(suggestion => {
-                                 console.log(suggestion.description)
                                  suggestionCapture.push({
                                     desc: suggestion.description,
                                     main: suggestion.formattedSuggestion.mainText,
                                     sec: suggestion.formattedSuggestion.secondaryText
                                  })
 
-                                 console.log(suggestionCapture)
                                  const className = suggestion.active
                                     ? 'suggestion-item--active'
                                     : 'suggestion-item';
-                                 // inline style for demonstration purpose
+
                                  const style = suggestion.active
                                     ? { backgroundColor: '#fafafa', cursor: 'pointer' }
                                     : { backgroundColor: '#ffffff', cursor: 'pointer' };
@@ -334,8 +328,10 @@ const MainPage = props => {
       )
    }
 
+   //Functional Component to display interface for pickUp details
    const pickUp = props => {
 
+      //Onchange functionality executed as user inputs value
       const handleChangePick = address => {
 
          checker()
@@ -343,7 +339,6 @@ const MainPage = props => {
 
          const ours = newSet.filter(test => test.address.includes(laddress))
 
-         console.log(ours)
 
          if (ours.length == 0) {
             setPickUpAdd(address);
@@ -356,27 +351,25 @@ const MainPage = props => {
 
       };
 
-
+      //Function to toggle select from current location option
       const checker = (e) => {
          setPickFromCurrent('none')
       };
 
+      //OnSelect functionality executed when user confirms address, for values coming from autoComplete api
       const handleSelectPick = address => {
          geocodeByAddress(address)
             .then(results => getLatLng(results[0]))
             .then(latLng => {
                setPickUpCoord(latLng)
                setPickUpAddress(address)
-               console.log('Success', latLng)
-               console.log('Success', address)
-               console.log('Success', dropOffCoord)
-               console.log('Success', dropOffAddress)
                showFirst()
             })
             .catch(error => console.error('Error', error));
       };
 
-      const handlePickFromOurs = (loc) => {
+      //OnSelect functionality executed when user confirms address, for values coming from database
+      const handlePickFromDB = (loc) => {
 
          setPickUpCoord({ lat: loc.lat, lng: loc.lng })
 
@@ -386,20 +379,21 @@ const MainPage = props => {
 
          showFirst()
 
-         console.log('its me')
       }
 
+      //Function to handle select from current location
       const selectFromCurrent = () => {
 
-         axios(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${pickUpCoord.lat},${pickUpCoord.lng}&key=AIzaSyAVwufhSaNsbADF3iEEzWtFfQsNsAxgyTU`)
-            .then(response => response.data.results)
-            .then(result => setPickUpAddress(result[0].formatted_address))
-            .then(showFirst())
+         axios(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${pickUpCoord.lat},${pickUpCoord.lng}&key=['API_KEY_HERE']`)
+         .then(response => response.data.results)
+         .then(result => setPickUpAddress(result[0].formatted_address))
+         .then(showFirst())
 
          setPickUpCoord({ lat: pickUpCoord.lat, lng: pickUpCoord.lng })
 
       }
 
+      //Config options for autocomplete Api
       const searchOptions = {
          location: new google.maps.LatLng(pickUpCoord.lat, pickUpCoord.lng),
          radius: 50000,
@@ -415,21 +409,21 @@ const MainPage = props => {
          <Box style={{ height: '100vh' }}>
             <AppBar position="static" style={{ backgroundColor: 'white', color: 'black', fontWeight: 'bolder', boxShadow: '0px 0px 0px 0px' }}>
                <Toolbar >
-                  <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu" onClick={showFirst}>
+                  <IconButton edge="start"  color="inherit" aria-label="menu" onClick={showFirst}>
                      <ArrowBackIos />
                      <Typography variant="subtitle1" >
                         Back
                   </Typography>
                   </IconButton>
 
-                  <Typography variant="h5" className={classes.typographydp}>
+                  <Typography variant="h5" style={{ flexGrow: 1, textAlign: "center", display: "flex", justifyContent: "center"}}>
                      Pickup &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-               </Typography>
+                  </Typography>
 
                </Toolbar>
             </AppBar>
 
-
+            {/* Dynamic content to display input for either data from the autocomplete function or from the database */}
             {  mine == 'contents'
                ?
                <Box mx={2}>
@@ -448,7 +442,7 @@ const MainPage = props => {
                   {tData.map(loc => {
                      const ourCoord = { lat: loc.lat, lng: loc.lng }
                      return (<Box my={2}  >
-                        <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handlePickFromOurs(loc)} >
+                        <ListItem style={{ borderBottom: '1px solid #f1f1f1' }} onClick={() => handlePickFromDB(loc)} >
                            <ListItemAvatar>
                               <Avatar>
                                  <LocationOn />
@@ -497,18 +491,16 @@ const MainPage = props => {
                            {loading && <div>Loading...</div>}
                            {<List>
                               {suggestions.map(suggestion => {
-                                 console.log(suggestion.description)
                                  suggestionCapture.push({
                                     desc: suggestion.description,
                                     main: suggestion.formattedSuggestion.mainText,
                                     sec: suggestion.formattedSuggestion.secondaryText
                                  })
 
-                                 console.log(suggestionCapture)
                                  const className = suggestion.active
                                     ? 'suggestion-item--active'
                                     : 'suggestion-item';
-                                 // inline style for demonstration purpose
+
                                  const style = suggestion.active
                                     ? { backgroundColor: '#fafafa', cursor: 'pointer' }
                                     : { backgroundColor: '#ffffff', cursor: 'pointer' };
@@ -544,6 +536,9 @@ const MainPage = props => {
          </Box>
       )
    }
+
+
+   //conditional statement to determine which screen to be displayed per time
 
    let screenShown;
 
